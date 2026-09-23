@@ -7,7 +7,7 @@ recursive-include examples *.csv
 include UPSTREAM.md
 include VALIDATION.md
 include README.upstream.md
-recursive-include inventree_bulk_plugin/frontend/src *.ts *.tsx
+recursive-include inventree_bulk_plugin/frontend/src *.ts *.tsx *.css LICENSE
 include inventree_bulk_plugin/frontend/package.json
 include inventree_bulk_plugin/frontend/package-lock.json
 include inventree_bulk_plugin/frontend/tsconfig*.json
