@@ -1,0 +1,32 @@
+name: Checks
+on: [push, pull_request, workflow_call]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: inventree_bulk_plugin/frontend/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci && npm run build
+        working-directory: inventree_bulk_plugin/frontend
+      - run: python -m pip install build twine
+      - run: python -m build && python -m twine check dist/*
+      - name: Isolated InvenTree and PostgreSQL tests
+        run: |
+          docker compose -p freezer-ci -f tools/test-compose.yml up -d
+          docker compose -p freezer-ci -f tools/test-compose.yml exec -T app sh /release/tools/test-integration.sh
+      - name: Clean up test containers
+        if: always()
+        run: docker compose -p freezer-ci -f tools/test-compose.yml down -v
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distribution
+          path: dist/*

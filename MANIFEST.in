@@ -1,0 +1,19 @@
+include LICENSE
+include README.md
+recursive-include inventree_bulk_plugin/static *
+recursive-include inventree_bulk_plugin/templates *
+recursive-include inventree_bulk_plugin/freezer_templates *.json
+recursive-include examples *.csv
+include UPSTREAM.md
+include VALIDATION.md
+include README.upstream.md
+recursive-include inventree_bulk_plugin/frontend/src *.ts *.tsx
+include inventree_bulk_plugin/frontend/package.json
+include inventree_bulk_plugin/frontend/package-lock.json
+include inventree_bulk_plugin/frontend/tsconfig*.json
+include inventree_bulk_plugin/frontend/vite.config.ts
+prune inventree_bulk_plugin/frontend/node_modules
+
+recursive-include docs *.md *.png
+recursive-include tools *.py *.yml *.sh
+include CHANGELOG.md

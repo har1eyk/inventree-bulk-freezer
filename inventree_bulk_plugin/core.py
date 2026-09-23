@@ -1,0 +1,127 @@
+import json
+import os
+from dataclasses import dataclass
+
+from django.core.exceptions import ValidationError
+from rest_framework.request import Request
+
+from plugin import InvenTreePlugin
+from plugin.base.ui.mixins import UIFeature
+from plugin.mixins import UserInterfaceMixin, UrlsMixin, AppMixin, SettingsMixin
+
+from .api import api_urls
+from . import PLUGIN_VERSION
+from stock.models import StockLocation
+from users.permissions import check_user_permission
+
+
+@dataclass
+class Panel:
+    title: str
+    model: str
+    icon: str
+    args: dict
+    key: str
+
+
+def validate_json(value):
+    try:
+        json.loads(value)
+    except Exception as e:
+        raise ValidationError(str(e))
+
+
+class InvenTreeBulkPlugin(
+    AppMixin, UserInterfaceMixin, UrlsMixin, SettingsMixin, InvenTreePlugin
+):
+    AUTHOR = "wolflu05"
+    DESCRIPTION = "Bulk creation with freezer-box workflows (fork of 1.5.2)"
+    VERSION = PLUGIN_VERSION
+
+    # 0.9.1 - due to "invoke update" doesn't run collectstatic (see inventree/InvenTree#4077)
+    # 0.12.6 - Settings do not work in combination with api views (see inventree/InvenTree#5408)
+    # 0.12.7 - Fix missing filters for get settings validator (see inventree/InvenTree#5480)
+    # 0.15.8 - plugin_static template tag was added (see inventree/InvenTree#7764)
+    # 0.18.0 - Migrate to PUI
+    # 1.2.0 - generic parameters
+    # 1.3.0 - default supplier was removed from part
+    MIN_VERSION = "1.3.0"
+
+    TITLE = "InvenTree Bulk + Freezer Boxes"
+    SLUG = "inventree-bulk-plugin"
+    NAME = "InvenTreeBulkPlugin"
+
+    SETTINGS = {
+        "DEFAULT_DOWNLOAD_HEADERS": {
+            "name": "Default download headers",
+            "description": "Set default download headers that should be used each time in json format",
+            "default": "{}",
+            "validator": validate_json,
+        }
+    }
+
+    PREACT_PANELS: list[Panel] = [
+        Panel(
+            "Location bulk creation",
+            model="stocklocation",
+            icon="ti:tools:outline",
+            args={"objectType": "STOCK_LOCATION"},
+            key="bulk-creation-location",
+        ),
+        Panel(
+            "Category bulk creation",
+            model="partcategory",
+            icon="ti:tools:outline",
+            args={"objectType": "PART_CATEGORY"},
+            key="bulk-creation-category",
+        ),
+        Panel(
+            "Part bulk creation",
+            model="partcategory",
+            icon="ti:tools:outline",
+            args={"objectType": "PART"},
+            key="bulk-creation-part",
+        ),
+    ]
+
+    def get_ui_panels(
+        self, request: Request, context: dict, **kwargs
+    ) -> list[UIFeature]:
+        panels = []
+
+        target_model = context.get("target_model", None)
+        target_id = context.get("target_id", None)
+
+        if target_model == "stocklocation" and target_id is not None and all(
+            check_user_permission(request.user, StockLocation, action) for action in ("view", "add")
+        ):
+            panels.append({
+                "key": "freezer-box-create",
+                "title": "Create freezer box",
+                "source": self.plugin_static_file("dist/freezer-box-panel.js") + f"?v={self.VERSION}:renderPanel",
+                "icon": "ti:snowflake:outline",
+            })
+
+        if not request.user.is_superuser:
+            return panels
+
+        for panel in self.PREACT_PANELS:
+            if target_model == panel.model and target_id is not None:
+                panels.append({
+                    "key": panel.key,
+                    "title": panel.title,
+                    "source": self.plugin_static_file(
+                        "bulk-creation-panel.dev.js:renderPanel"
+                        if os.environ.get("INVENTREE_BULK_DEV", False)
+                        else "dist/bulk-creation-panel.js:renderPanel"
+                    ),
+                    "icon": panel.icon,
+                    "context": {
+                        "args": panel.args,
+                    },
+                })
+
+        return panels
+
+    def setup_urls(self):
+        return api_urls

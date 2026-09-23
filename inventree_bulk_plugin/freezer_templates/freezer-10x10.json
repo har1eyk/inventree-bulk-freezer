@@ -1,0 +1,36 @@
+{
+  "name": "Freezer box 10\u00d710",
+  "template_type": "STOCK_LOCATION",
+  "template": {
+    "version": "1.0.0",
+    "input": {
+      "box_name": "Freezer_Box"
+    },
+    "templates": [],
+    "output": {
+      "generate": {
+        "name": "{{inp.box_name}}",
+        "structural": false,
+        "external": false
+      },
+      "childs": [
+        {
+          "dimensions": [
+            "*ALPHA(casing=upper,start=A)",
+            "*NUMERIC(start=1)"
+          ],
+          "count": [
+            "10",
+            "10"
+          ],
+          "generate": {
+            "name": "{{dim.1}}{{dim.2}}",
+            "structural": false,
+            "external": false
+          },
+          "childs": []
+        }
+      ]
+    }
+  }
+}
